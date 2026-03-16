@@ -20,3 +20,16 @@ jobs:
         run: npx semantic-release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        name: Send DingTalk notification
+        if: always()  # 无论成功失败都发送通知，也可以改成 success() 或 failure()
+        uses: htynkn/dingtalk-robot@v1
+        with:
+          webhook: ${{secrets.DINGTALK_WEBHOOK_URL }}
+          content: |-
+            ### GitHub Actions 执行通知
+            - **仓库**: ${{ github.repository }}
+            - **分支**: ${{ github.ref }}
+            - **提交信息**: ${{ github.event.head_commit.message }}
+            - **执行人**: ${{ github.actor }}
+            - **状态**: ${{ job.status }}
+            - **查看详情**: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
