@@ -1,0 +1,20 @@
+name: Melon Ticket Monitor
+
+on:
+  workflow_dispatch: # 允许手动点击运行
+  schedule:
+    - cron: '*/1 * * * *' # 每1分钟检查一次
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run Ticket Check
+        uses: ./ # 👈 关键点：使用当前仓库的代码作为 Action
+        with:
+          product-id: '212765'             # 👈 替换这里
+          slack-incoming-webhook-url: 'https://oapi.dingtalk.com/robot/send?access_token=e6e99c9a4e0360e24a9bc6473de38418ea6f666b87ac0b158510eb04464d0d73' # 👈 替换这里
+          # 如果有其他参数如 cookie, account 等，继续在这里添加
