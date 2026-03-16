@@ -1,39 +1,22 @@
-name: Melon Ticket (DingTalk Final)
-
-on:
-  schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
-
+name: workflow
+on: push
 jobs:
-  check:
+  job:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Check & Notify
-        run: |
-          # 1. 设置变量
-          PROD_ID="212765"  # 改这里
-          SCHED_ID="100001" # 改这里
-          DING_TOKEN="${{ secrets.DINGTALK_WEBHOOK }}"
-          
-          # 2. 执行检查 (这里使用 curl 简单模拟，实际可能需要更复杂的脚本)
-          # 提示：Melon 需要 Cookie，如果没有 Cookie，curl 可能会失败。
-          # 强烈建议：如果 curl 搞不定，就用原版插件 + 邮件报警法。
-          
-          echo "正在检查 ${PROD_ID} ..."
-          
-          # 模拟检查结果 (因为没有真实的 Cookie，这里默认没票)
-          # 如果你有办法获取票务状态，替换下面的逻辑
-          IS_AVAILABLE=true
-          
-          # 【重要】如果你想测试，把上面改成 IS_AVAILABLE=true
-          
-          if [ "$IS_AVAILABLE" = true ]; then
-             echo "🔥 有票！发送钉钉通知..."
-             curl -s -X POST "https://oapi.dingtalk.com/robot/send?access_token=$DING_TOKEN" \
-               -H "Content-Type: application/json" \
-               -d "{\"msgtype\":\"text\",\"text\":{\"content\":\"🚨 有票了！ID: ${PROD_ID}\"}}"
-             exit 1 # 让任务变红，触发 GitHub 邮件双重保险
-          else
-             echo "无票。"
-          fi
+      - uses: actions/checkout@v1
+      - name: Prepare
+        run: npm ci
+      - name: Lint
+        uses: mooyoul/tslint-actions@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: '*.ts'
+      - name: Build
+        run: npm run build
+      - name: Publish
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: npx semantic-release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
