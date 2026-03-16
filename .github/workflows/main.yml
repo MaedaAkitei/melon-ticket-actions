@@ -1,35 +1,39 @@
-name: workflow
-on: push
+name: Melon Ticket Alert (Robust Email)
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
 jobs:
-  job:
+  check-ticket:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v1
-      - name: Prepare
-        run: npm ci
-      - name: Lint
-        uses: mooyoul/tslint-actions@master
+      # 尝试利用插件发送失败来报错
+      - name: Check Tickets (With Invalid Webhook)
+        id: check_step
+        continue-on-error: true # 即使这一步报错，也继续往下走，让我们有机会处理
+        uses: mooyoul/melon-ticket-actions@v1.1.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pattern: '*.ts'
-      - name: Build
-        run: npm run build
-      - name: Publish
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        run: npx semantic-release
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        name: Send DingTalk notification
-        if: always()  # 无论成功失败都发送通知，也可以改成 success() 或 failure()
-        uses: htynkn/dingtalk-robot@v1
-        with:
-          webhook: ${{secrets.DINGTALK_WEBHOOK_URL }}
-          content: |-
-            ### GitHub Actions 执行通知
-            - **仓库**: ${{ github.repository }}
-            - **分支**: ${{ github.ref }}
-            - **提交信息**: ${{ github.event.head_commit.message }}
-            - **执行人**: ${{ github.actor }}
-            - **状态**: ${{ job.status }}
-            - **查看详情**: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          product-id: 212765     # 👈 修改这里
+          schedule-id: 100001      # 👈 修改这里
+          seat-id: 1_0             
+          # 故意给一个无效的 Webhook，如果插件在有票时尝试发送，可能会报错
+          slack-incoming-webhook-url: 'https://invalid-url-for-testing.com/fake'
+          message: 'Ticket Found!'
+
+      # 如果上一步因为发送失败而报错了 (outcome == 'failure')，说明可能有票！
+      - name: Trigger Alert If Plugin Failed
+        if: steps.check_step.outcome == 'failure'
+        run: |
+          echo "🚨 插件运行失败（可能是因为有票且无法发送 Slack）！"
+          echo "🚨 判定为：有票！"
+          exit 1 # 再次报错，确保 GitHub 发邮件
+
+      # 如果上一步成功了 (outcome == 'success')，说明没票，或者插件没尝试发送
+      - name: Success Log
+        if: steps.check_step.outcome == 'success'
+        run: |
+          echo "😭 插件运行成功，推测暂无余票。"
+          exit 0
