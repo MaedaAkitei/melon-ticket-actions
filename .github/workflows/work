@@ -1,17 +1,17 @@
 name: example
 on:
   schedule:
-    - cron: '*/1 * * * *' # Every 5 minutes
+    - cron: '*/5 * * * *' # Every 5 minutes
 jobs:
   job:
     runs-on: ubuntu-latest
-    timeout-minutes: 1
+    timeout-minutes: 5
     steps:
       - name: Check Tickets
-        uses: maeda
+        uses: mooyoul/melon-ticket-actions@v1.1.0
         with:
           product-id: 212765
           schedule-id: 100001
           seat-id: 1_0
-          dingtalk-webhook-url: ${{ secrets.DINGTALK_WEBHOOK_URL }}  
-          message: '티켓사세요'  
+          slack-incoming-webhook-url: 'http://this-is-an-invalid-url-that-will-fail.com'
+          message: '<@U12345678> 달려달려~'
